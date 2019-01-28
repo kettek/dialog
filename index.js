@@ -3,8 +3,10 @@
  MIT License.
 */
 
-var join  = require('path').join,
-    spawn = require('child_process').spawn;
+var join          = require('path').join,
+    spawn         = require('child_process').spawn,
+    writeFileSync = require('fs').writeFileSync,
+    tmpdir        = require('os').tmpdir;
 
 var Dialog = module.exports = {
 
@@ -99,10 +101,21 @@ var Dialog = module.exports = {
       }
 
       str = str.replace(/"/g, "'"); // double quotes to single quotes
-     
+
+      // This is pretty hacky. Oh well.
       // msgbox.vbs script from http://stackoverflow.com/questions/774175
+      writeFileSync(
+        join(tmpdir(), 'msgbox.vbs'),
+        `Set objArgs = WScript.Arguments
+        messageText = objArgs(0)
+        messageType = objArgs(1)
+        messageTitle = objArgs(2)
+        retValue = MsgBox(messageText, messageType, messageTitle)
+        WScript.Quit (retValue - 1)`
+      )
+     
       cmd.push('cscript');
-      cmd.push(join(__dirname, 'msgbox.vbs'));
+      cmd.push(join(tmpdir(), 'msgbox.vbs'));
       cmd.push(str) && cmd.push(type) && cmd.push(title);
 
     }
@@ -117,9 +130,7 @@ var Dialog = module.exports = {
         stdout = '',
         stderr = '';
 
-    var child = spawn(bin, args, {
-      detached: true
-    });
+    var child = spawn(bin, args);
 
     child.stdout.on('data', function(data) {
       stdout += data.toString();
